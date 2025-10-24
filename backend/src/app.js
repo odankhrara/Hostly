@@ -7,7 +7,7 @@ const path = require('path');
 // --- Our Imports ---
 const Logger = require('./config/logger');
 const { sequelize, testConnection } = require('./config/database'); // Import sequelize
-const mainRoutes = require('./routes');
+// const mainRoutes = require('./routes'); // TODO: Uncomment when routes are defined
 
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -51,7 +51,7 @@ app.use(session({
 
 // --- API Routes ---
 // All your API routes will be prefixed with /api
-app.use('/api', mainRoutes); 
+// app.use('/api', mainRoutes);  // TODO: Uncomment when routes are defined
 
 // --- 404 Not Found Handler ---
 // This catches any request that doesn't match an API route
@@ -75,17 +75,21 @@ const startServer = async () => {
         // 1. Test the database connection
         await testConnection();
         logger.info('Database connection verified.');
+        
+        // 2. Automatically sync all models with the database
+        await sequelize.sync({ alter: true }); 
+        logger.info('All models were synchronized successfully.');
 
-        // 2. Sync the session store (creates the 'sessions' table)
+        // 3. Sync the session store (creates the 'sessions' table)
         await sessionStore.sync();
         logger.info('Session store synced.');
 
-        // 3. Start the Express server
+        // 4. Start the Express server
         const server = app.listen(PORT, () => {
             logger.info(`Server is running on port ${PORT}`);
         });
 
-        // 4. Set up graceful shutdown (for production)
+        // 5. Set up graceful shutdown (for production)
         process.on('SIGTERM', () => {
             logger.info('SIGTERM received. Shutting down gracefully...');
             server.close(() => {
