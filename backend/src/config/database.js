@@ -1,17 +1,39 @@
-const mysql = require('mysql2');
-require('dotenv').config();
+const { Sequelize } = require('sequelize');
+const Logger = require('./logger'); // Assumes logger.js is in the same folder
+const logger = new Logger('Database');
 
-const pool = mysql.createPool({
+// Create a new Sequelize instance
+const sequelize = new Sequelize({
+    dialect: 'mysql',
     host: process.env.DB_HOST,
-    user: process.env.DB_USER,
+    username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+
+    // Use our custom logger for SQL queries
+    logging: (msg) => logger.debug(msg),
+
+    // Define global options for all models
+    define: {
+        timestamps: true,   // Automatically adds createdAt and updatedAt
+        underscored: true   // Uses snake_case for table/column names (e.g., user_id)
+    }
 });
 
-// Convert pool to use promises
-const promisePool = pool.promise();
+/**
+ * Tests the database connection.
+ */
+const testConnection = async () => {
+    try {
+        await sequelize.authenticate();
+        logger.info('Database connection established successfully.');
+    } catch (error) {
+        logger.error('Unable to connect to the database:', error);
+        throw error; // Re-throw the error to stop the application
+    }
+};
 
-module.exports = promisePool;
+module.exports = {
+    sequelize,
+    testConnection
+};
