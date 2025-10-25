@@ -18,6 +18,17 @@ class UserRepository {
     async createUser(userData) {
         return User.create(userData);
     }
+/**
+     * Finds a user by their primary key (ID).
+     * @param {number} userId - The user's ID.
+     * @returns {Promise<User|null>}
+     */
+    async findUserById(userId) {
+        // Exclude the password field from the result automatically
+        return User.findByPk(userId, {
+            attributes: { exclude: ['password'] }
+        });
+    }
 }
 
 // We export a single instance of the repository

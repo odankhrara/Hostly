@@ -1,4 +1,5 @@
 const userRepository = require('../repositories/user.repository');
+const bcrypt = require('bcryptjs');
 
 class AuthService {
     /**
@@ -21,6 +22,59 @@ class AuthService {
         // 3. Don't return the hashed password
         newUser.password = undefined;
         return newUser;
+    }
+
+    /**
+     * Logs a user.
+     * @param {string} email - User's email.
+     * @param {string} password - User's password.
+     * @returns {Promise<User>}
+     */
+    async loginUser(email, password) {
+        // 1. Find the user by email
+        const user = await userRepository.findUserByEmail(email);
+        if (!user) {
+            throw new Error('Invalid email or password.');
+        }
+        // 2. Compare the provided password with the stored hashed password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            throw new Error('Invalid email or password.');
+        }
+        // 3. Don't return the hashed password
+        user.password = undefined;
+        return user;
+    }
+
+    /**
+     * Logs out a user by destroying their session.
+     * @param {object} session - Express request object.
+     * @returns {Promise<void>}
+     */
+    async logoutUser(session) {
+        return new Promise((resolve, reject) => {
+            session.destroy(err => {
+                if (err) {
+                    reject(new Error('Could not log out, please try again.'));
+                } else {
+                resolve();
+                }
+            });
+        });
+    }
+
+
+    /**
+     * Gets the current logged-in user based on session.
+     * * @param {object} userId - The user ID stored in the session.
+     * * @returns {Promise<User>}
+     */
+    async getCurrentUser(userId) {
+        if(!userId) {
+            return null;
+        }
+        const user = await userRepository.findUserById(userId);
+        return user;
     }
 }
 
