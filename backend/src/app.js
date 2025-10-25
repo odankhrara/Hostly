@@ -7,7 +7,7 @@ const path = require('path');
 // --- Our Imports ---
 const Logger = require('./config/logger');
 const { sequelize, testConnection } = require('./config/database'); // Import sequelize
-// const mainRoutes = require('./routes'); // TODO: Uncomment when routes are defined
+const mainRoutes = require('./routes'); // TODO: Uncomment when routes are defined
 
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -51,7 +51,7 @@ app.use(session({
 
 // --- API Routes ---
 // All your API routes will be prefixed with /api
-// app.use('/api', mainRoutes);  // TODO: Uncomment when routes are defined
+app.use('/api', mainRoutes);  // TODO: Uncomment when routes are defined
 
 // --- 404 Not Found Handler ---
 // This catches any request that doesn't match an API route
