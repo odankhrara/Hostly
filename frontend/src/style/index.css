@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+CSS
+
+:root { color-scheme: light; }
+
+/* Focus ring for accessibility */
+.focus-ring:focus {
+  outline: 3px solid theme('colors.brand.500');
+  outline-offset: 2px;
+}
+
+/* Nicer, thin scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
