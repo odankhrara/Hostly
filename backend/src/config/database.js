@@ -10,6 +10,9 @@ const config = {
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  dialectOptions: {
+    socketPath: '/tmp/mysql.sock'
+  },
   logging: (msg) => logger.debug(msg),
   define: {
     timestamps: true,

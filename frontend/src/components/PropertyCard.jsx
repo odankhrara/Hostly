@@ -1,15 +1,14 @@
+
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Heart } from 'lucide-react'
+import { getImageUrl } from '../utils/imageUtils'
 
 export default function PropertyCard({ p, onFavToggle, isFav }) {
   return (
     <article className="rounded-2xl border bg-white shadow-sm overflow-hidden">
       <img
-        src={
-          p.photos?.[0] ||
-          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=800&auto=format&fit=crop'
-        }
+        src={getImageUrl(p.main_image)}
         alt={p.name}
         className="h-48 w-full object-cover"
       />
@@ -23,12 +22,12 @@ export default function PropertyCard({ p, onFavToggle, isFav }) {
               isFav ? 'text-brand-700' : 'text-gray-500 hover:text-brand-700'
             }`}
           >
-            <Heart className="w-5 h-5" />
+            <Heart className={`w-5 h-5 ${isFav ? 'fill-current' : ''}`} />
           </button>
         </div>
         <p className="text-sm text-gray-600">{p.location}</p>
         <p className="mt-2 font-semibold">
-          ${p.pricing}/night • {p.bedrooms} bd • {p.bathrooms} ba
+          ${p.price_per_night}/night • {p.bedrooms} bd • {p.bathrooms} ba
         </p>
         <Link
           to={`/property/${p.id}`}

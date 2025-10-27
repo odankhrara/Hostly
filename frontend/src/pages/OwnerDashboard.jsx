@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import api from '../services/api'
 import BookingStatusBadge from '../components/BookingStatusBadge'
 import { Link } from 'react-router-dom'
+import { getImageUrl } from '../utils/imageUtils'
 
 export default function OwnerDashboard() {
   const [bookings, setBookings] = useState([])
@@ -22,10 +23,14 @@ export default function OwnerDashboard() {
 
   const respond = async (id, action) => {
     try {
+      console.log(`Responding to booking ${id} with action ${action}`)
       const url = action==='ACCEPT' ? `/bookings/${id}/accept` : `/bookings/${id}/cancel`
-      await api.post(url)
+      const response = await api.post(url)
+      console.log('Response:', response.data)
       load()
-    } catch {}
+    } catch (error) {
+      console.error('Error responding to booking:', error)
+    }
   }
 
   return (
@@ -37,9 +42,21 @@ export default function OwnerDashboard() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {properties.map(p=>(
           <article key={p.id} className="bg-white rounded-2xl border p-4">
+            <img 
+              src={getImageUrl(p.main_image)} 
+              alt={p.name} 
+              className="w-full h-32 object-cover rounded-lg mb-3" 
+            />
             <h3 className="font-semibold">{p.name}</h3>
             <p className="text-sm text-gray-600">{p.location}</p>
-            <p className="mt-1">${p.pricing}/night</p>
+            <p className="mt-1 text-sm">${p.price_per_night}/night</p>
+            <p className="text-xs text-gray-500 mt-1">{p.bedrooms} bd • {p.bathrooms} ba • {p.max_guests} guests</p>
+            <div className="mt-2 flex items-center justify-between">
+              <span className={`px-2 py-1 rounded-full text-xs ${p.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                {p.status}
+              </span>
+              <span className="text-xs text-gray-500">{p.total_bookings} bookings</span>
+            </div>
           </article>
         ))}
       </div>
@@ -53,12 +70,32 @@ export default function OwnerDashboard() {
               <tr key={b.id} className="border-t">
                 <td className="p-2">{b.propertyName}</td>
                 <td className="p-2">{b.travelerName}</td>
-                <td className="p-2">{b.startDate} → {b.endDate}</td>
-                <td className="p-2">{b.guests}</td>
+                <td className="p-2">{b.start_date} → {b.end_date}</td>
+                <td className="p-2">{b.num_guests}</td>
                 <td className="p-2"><BookingStatusBadge status={b.status} /></td>
                 <td className="p-2 space-x-2">
-                  <button onClick={()=>respond(b.id,'ACCEPT')} className="px-3 py-1 rounded-lg bg-green-600 text-white disabled:opacity-60" disabled={b.status!=='PENDING'}>Accept</button>
-                  <button onClick={()=>respond(b.id,'CANCEL')} className="px-3 py-1 rounded-lg bg-red-600 text-white disabled:opacity-60" disabled={b.status==='CANCELLED'}>Cancel</button>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('Accept button clicked for booking:', b.id);
+                      respond(b.id, 'ACCEPT');
+                    }} 
+                    className="px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                    disabled={b.status !== 'pending'}
+                  >
+                    Accept
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log('Cancel button clicked for booking:', b.id);
+                      respond(b.id, 'CANCEL');
+                    }} 
+                    className="px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                    disabled={b.status === 'cancelled'}
+                  >
+                    Cancel
+                  </button>
                 </td>
               </tr>
             ))}

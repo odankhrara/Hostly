@@ -56,8 +56,4 @@ Booking.init({
     timestamps: true,
 });
 
-// Associations
-Booking.belongsTo(Property, { foreignKey: 'property_id', as: 'property' });
-Booking.belongsTo(User, { foreignKey: 'traveler_id', as: 'traveler' });
-
 module.exports = Booking;

@@ -60,16 +60,9 @@ Property.init({
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    amenities: {              // Simplified amenities as JSON
+    amenities: {              // Simplified amenities as comma-separated string
         type: DataTypes.TEXT,
         allowNull: true,
-        get() {
-            const rawValue = this.getDataValue('amenities');
-            return rawValue ? JSON.parse(rawValue) : [];
-        },
-        set(val) {
-            this.setDataValue('amenities', JSON.stringify(val));
-        }
     },
     main_image: {             // Single image field
         type: DataTypes.STRING(255),
@@ -82,8 +75,5 @@ Property.init({
     underscored: true,
     timestamps: true,
 });
-
-// Association
-Property.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
 
 module.exports = Property;

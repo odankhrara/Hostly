@@ -154,57 +154,101 @@ export default function AgentButton() {
               {result && !result.error && (
                 <div className="space-y-4">
                   <section>
-                    <h4 className="font-semibold text-lg">Itinerary</h4>
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Itinerary
+                    </h4>
                     {result.plan?.map((day, idx) => (
-                      <div key={idx} className="mt-2 p-3 rounded-xl border">
-                        <p className="font-medium">
+                      <div key={idx} className="mt-2 p-3 rounded-xl border bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <p className="font-medium text-indigo-800">
                           Day {idx + 1} — {day.date}
                         </p>
-                        <ul className="list-disc pl-5 text-sm text-gray-700">
-                          <li>Morning: {day.morning}</li>
-                          <li>Afternoon: {day.afternoon}</li>
-                          <li>Evening: {day.evening}</li>
+                        <ul className="list-disc pl-5 text-sm text-gray-700 mt-2 space-y-1">
+                          <li><span className="font-medium text-orange-600">Morning:</span> {day.morning}</li>
+                          <li><span className="font-medium text-blue-600">Afternoon:</span> {day.afternoon}</li>
+                          <li><span className="font-medium text-purple-600">Evening:</span> {day.evening}</li>
                         </ul>
                       </div>
                     ))}
                   </section>
 
                   <section>
-                    <h4 className="font-semibold text-lg">Activities</h4>
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                      Activities
+                    </h4>
                     <div className="grid grid-cols-1 gap-3">
                       {result.activities?.map((a, i) => (
-                        <article key={i} className="p-3 rounded-xl border">
-                          <p className="font-medium">{a.title}</p>
-                          <p className="text-sm text-gray-600">{a.address}</p>
-                          <p className="text-xs mt-1">
-                            {a.tags?.join(' • ')}{' '}
-                            {a.childFriendly && '• Child-friendly'}{' '}
-                            {a.wheelchair && '• Wheelchair accessible'}
-                          </p>
+                        <article key={i} className="p-3 rounded-xl border bg-gradient-to-r from-yellow-50 to-orange-50">
+                          <p className="font-medium text-orange-800">{a.title}</p>
+                          <p className="text-sm text-gray-600 mt-1">{a.address}</p>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {a.tags?.map((tag, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-orange-200 text-orange-800 text-xs rounded-full">
+                                {tag}
+                              </span>
+                            ))}
+                            {a.childFriendly && (
+                              <span className="px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full">
+                                Child-friendly
+                              </span>
+                            )}
+                            {a.wheelchair && (
+                              <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full">
+                                Wheelchair accessible
+                              </span>
+                            )}
+                          </div>
                         </article>
                       ))}
                     </div>
                   </section>
 
                   <section>
-                    <h4 className="font-semibold text-lg">Restaurants</h4>
-                    <ul className="list-disc pl-5 text-sm text-gray-700">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                      Restaurants
+                    </h4>
+                    <div className="space-y-2">
                       {result.restaurants?.map((r, i) => (
-                        <li key={i}>
-                          {r.name} — {r.cuisine} — {r.price}
-                        </li>
+                        <div key={i} className="p-3 rounded-xl border bg-gradient-to-r from-red-50 to-pink-50">
+                          <p className="font-medium text-red-800">{r.name}</p>
+                          <p className="text-sm text-gray-600">{r.cuisine} • {r.price}</p>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </section>
 
                   <section>
-                    <h4 className="font-semibold text-lg">Packing checklist</h4>
-                    <ul className="list-disc pl-5 text-sm text-gray-700">
+                    <h4 className="font-semibold text-lg flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Packing Checklist
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
                       {result.checklist?.map((c, i) => (
-                        <li key={i}>{c}</li>
+                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-green-50">
+                          <input type="checkbox" className="rounded" />
+                          <span className="text-sm text-gray-700">{c}</span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </section>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-4 border-t">
+                    <button 
+                      onClick={() => window.print()}
+                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Print Plan
+                    </button>
+                    <button 
+                      onClick={() => setResult(null)}
+                      className="flex-1 px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors"
+                    >
+                      Generate New Plan
+                    </button>
+                  </div>
                 </div>
               )}
 

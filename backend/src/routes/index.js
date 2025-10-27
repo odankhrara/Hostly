@@ -1,31 +1,20 @@
-<<<<<<< HEAD
 // CommonJS router index
 const { Router } = require('express');
 const authRoutes = require('./auth.routes');
+const propertyRoutes = require('./property.routes');
+const bookingRoutes = require('./booking.routes');
+const ownerRoutes = require('./owner.routes');
+const agentRoutes = require('./agent.routes');
+const travelerRoutes = require('./traveler.routes');
+const favoritesRoutes = require('./favorites.routes');
 
 const router = Router();
 router.use('/auth', authRoutes); // -> /api/auth/...
+router.use('/properties', propertyRoutes); // -> /api/properties/...
+router.use('/bookings', bookingRoutes); // -> /api/bookings/...
+router.use('/owner', ownerRoutes); // -> /api/owner/...
+router.use('/agent', agentRoutes); // -> /api/agent/...
+router.use('/traveler', travelerRoutes); // -> /api/traveler/...
+router.use('/favorites', favoritesRoutes); // -> /api/favorites/...
 
 module.exports = router;
-=======
-const express = require('express');
-const router = express.Router();
-
-// Import your auth routes
-const authRoutes = require('./auth.routes');
-
-// Tell the main router to use them
-// All routes in authRoutes will be prefixed with /auth
-router.use('/auth', authRoutes);
-
-// We'll add property routes here later
-// const propertyRoutes = require('./properties.routes');
-// router.use('/properties', propertyRoutes);
-
-// A simple test route to make sure everything is working
-router.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', session: req.session });
-});
-
-module.exports = router;
->>>>>>> 2f80eceb4f2b921763b9913072b3537c76ea39cd
