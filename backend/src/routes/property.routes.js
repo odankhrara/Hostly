@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Property } = require('../models');
+const { Op } = require('sequelize');
 
 
 // GET /api/properties/search - Search properties
@@ -8,8 +9,67 @@ router.get('/search', async (req, res) => {
   try {
     const { location, startDate, endDate, guests } = req.query;
     
-    // Get all properties from database
+    // Validate date range
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const today = new Date();
+      
+      // Check if dates are valid
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ 
+          message: 'Invalid date format. Please use YYYY-MM-DD format.',
+          error: 'INVALID_DATE_FORMAT'
+        });
+      }
+      
+      // Check if check-in is in the past
+      if (start < today) {
+        return res.status(400).json({ 
+          message: 'Check-in date cannot be in the past.',
+          error: 'CHECKIN_IN_PAST'
+        });
+      }
+      
+      // Check if check-out is before check-in
+      if (end <= start) {
+        return res.status(400).json({ 
+          message: 'Check-out date must be after check-in date.',
+          error: 'INVALID_DATE_RANGE'
+        });
+      }
+      
+      // Check if date range is too long (more than 1 year)
+      const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (daysDiff > 365) {
+        return res.status(400).json({ 
+          message: 'Stay duration cannot exceed 365 days.',
+          error: 'STAY_TOO_LONG'
+        });
+      }
+    }
+    
+    // Build search conditions
+    const whereConditions = {};
+    
+    // Filter by location (city or state)
+    if (location && location.trim()) {
+      const locationLower = location.toLowerCase();
+      whereConditions[Op.or] = [
+        { city: { [Op.like]: `%${locationLower}%` } },
+        { state: { [Op.like]: `%${locationLower}%` } },
+        { country: { [Op.like]: `%${locationLower}%` } }
+      ];
+    }
+    
+    // Filter by guest capacity
+    if (guests && !isNaN(guests)) {
+      whereConditions.max_guests = { [Op.gte]: parseInt(guests) };
+    }
+    
+    // Get properties from database with filters
     const properties = await Property.findAll({
+      where: whereConditions,
       order: [['created_at', 'DESC']]
     });
 
