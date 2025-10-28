@@ -12,11 +12,59 @@ export default function TravelerDashboard() {
   const [tab, setTab] = useState('search')
   const [bookings, setBookings] = useState([])
   const [showAISearch, setShowAISearch] = useState(false)
+  const [error, setError] = useState('')
+
+  const validateDates = () => {
+    if (!filters.startDate || !filters.endDate) return true
+    
+    const start = new Date(filters.startDate)
+    const end = new Date(filters.endDate)
+    const today = new Date()
+    
+    // Check if check-in is in the past
+    if (start < today) {
+      setError('Check-in date cannot be in the past.')
+      return false
+    }
+    
+    // Check if check-out is before check-in
+    if (end <= start) {
+      setError('Check-out date must be after check-in date.')
+      return false
+    }
+    
+    // Check if date range is too long
+    const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+    if (daysDiff > 365) {
+      setError('Stay duration cannot exceed 365 days.')
+      return false
+    }
+    
+    return true
+  }
 
   const search = async (e) => {
     if (e) e.preventDefault()
-    const { data } = await api.get('/properties/search', { params: filters })
-    setList(data.properties || [])
+    
+    // Clear previous errors
+    setError('')
+    
+    // Validate dates
+    if (!validateDates()) {
+      return
+    }
+    
+    try {
+      const { data } = await api.get('/properties/search', { params: filters })
+      setList(data.properties || [])
+    } catch (error) {
+      console.error('Search error:', error)
+      if (error.response?.data?.message) {
+        setError(error.response.data.message)
+      } else {
+        setError('Search failed. Please try again.')
+      }
+    }
   }
 
   const loadFavs = async () => {
@@ -71,13 +119,21 @@ export default function TravelerDashboard() {
       )}
 
       {tab==='search' && !showAISearch && (
-        <form onSubmit={search} className="bg-white rounded-2xl shadow p-4 grid md:grid-cols-5 gap-3">
-          <input placeholder="Location" value={filters.location} onChange={(e)=>setFilters({...filters, location: e.target.value})} className="rounded-xl border px-3 py-2 md:col-span-2" aria-label="Location" />
-          <input type="date" value={filters.startDate} onChange={(e)=>setFilters({...filters, startDate: e.target.value})} className="rounded-xl border px-3 py-2" aria-label="Start date" />
-          <input type="date" value={filters.endDate} onChange={(e)=>setFilters({...filters, endDate: e.target.value})} className="rounded-xl border px-3 py-2" aria-label="End date" />
-          <input type="number" min="1" value={filters.guests} onChange={(e)=>setFilters({...filters, guests: Number(e.target.value)})} className="rounded-xl border px-3 py-2" aria-label="Guests" />
-          <button className="rounded-xl bg-brand-600 text-white px-4 py-2">Search</button>
-        </form>
+        <div>
+          <form onSubmit={search} className="bg-white rounded-2xl shadow p-4 grid md:grid-cols-5 gap-3">
+            <input placeholder="Location" value={filters.location} onChange={(e)=>setFilters({...filters, location: e.target.value})} className="rounded-xl border px-3 py-2 md:col-span-2" aria-label="Location" />
+            <input type="date" value={filters.startDate} onChange={(e)=>setFilters({...filters, startDate: e.target.value})} className="rounded-xl border px-3 py-2" aria-label="Start date" />
+            <input type="date" value={filters.endDate} onChange={(e)=>setFilters({...filters, endDate: e.target.value})} className="rounded-xl border px-3 py-2" aria-label="End date" />
+            <input type="number" min="1" value={filters.guests} onChange={(e)=>setFilters({...filters, guests: Number(e.target.value)})} className="rounded-xl border px-3 py-2" aria-label="Guests" />
+            <button className="rounded-xl bg-brand-600 text-white px-4 py-2">Search</button>
+          </form>
+          
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+        </div>
       )}
 
       {tab==='search' && (
