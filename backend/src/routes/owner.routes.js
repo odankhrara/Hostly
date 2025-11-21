@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Property, Booking, User } = require('../models');
 const upload = require('../config/upload');
+const kafkaService = require('../services/kafka.service');
 
 // GET /api/owner/properties - Get owner's properties
 router.get('/properties', async (req, res) => {
@@ -208,6 +209,18 @@ router.post('/:id/accept', async (req, res) => {
       updated_at: new Date()
     });
 
+    // Publish booking status updated event to Kafka (async, don't wait)
+    kafkaService.publishBookingStatusUpdated({
+      id: booking.id,
+      property_id: booking.property_id,
+      traveler_id: booking.traveler_id,
+      status: booking.status,
+      updated_at: booking.updated_at
+    }).catch(err => {
+      console.error('Failed to publish booking-status-updated event:', err);
+      // Don't fail the request if Kafka publish fails
+    });
+
     console.log(`Accepting booking ${id}`);
     console.log('Booking accepted:', {
       id: booking.id,
@@ -261,6 +274,18 @@ router.post('/:id/cancel', async (req, res) => {
     await booking.update({ 
       status: 'cancelled',
       updated_at: new Date()
+    });
+
+    // Publish booking status updated event to Kafka (async, don't wait)
+    kafkaService.publishBookingStatusUpdated({
+      id: booking.id,
+      property_id: booking.property_id,
+      traveler_id: booking.traveler_id,
+      status: booking.status,
+      updated_at: booking.updated_at
+    }).catch(err => {
+      console.error('Failed to publish booking-status-updated event:', err);
+      // Don't fail the request if Kafka publish fails
     });
 
     console.log(`Cancelling booking ${id}`);

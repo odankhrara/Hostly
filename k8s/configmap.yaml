@@ -17,4 +17,5 @@ data:
   MAX_SEARCH_RESULTS: "5"
   AGENT_MODEL: "gpt-4"
   AGENT_TEMPERATURE: "0.7"
+  KAFKA_BROKER: "kafka:9092"
 

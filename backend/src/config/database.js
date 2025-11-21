@@ -9,7 +9,7 @@ const config = {
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 3306,
   username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD || undefined,
+  password: (process.env.DB_PASSWORD && process.env.DB_PASSWORD.trim() !== '') ? process.env.DB_PASSWORD : undefined,
   database: process.env.DB_NAME,
   // Use socket path only if DB_HOST is not set (local development)
   ...(process.env.DB_HOST ? {} : {

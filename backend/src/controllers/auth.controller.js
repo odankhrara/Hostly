@@ -43,6 +43,13 @@ exports.register = async (req, res, next) => {
       role: user.role
     };
 
+    // Save session explicitly
+    req.session.save((err) => {
+      if (err) {
+        console.error('Error saving session:', err);
+      }
+    });
+
     return ok(res, { user: req.session.user }, 201);
   } catch (err) {
     console.error('Register error:', err);

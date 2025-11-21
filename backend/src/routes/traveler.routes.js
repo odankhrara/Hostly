@@ -50,8 +50,16 @@ const requireAuth = (req, res, next) => {
 // Update traveler profile
 router.put('/profile', requireAuth, async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const userId = req.session.user?.id;
+    
+    if (!userId) {
+      logger.error('No user ID in session');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
     const updateData = req.body;
+    
+    logger.info(`Profile update request for user ${userId}:`, { updateData });
 
     // Map frontend field names to database field names
     const mappedData = {
@@ -66,10 +74,15 @@ router.put('/profile', requireAuth, async (req, res) => {
       gender: updateData.gender
     };
 
-    // Remove undefined values
+    // Remove undefined values and convert empty strings to null
     Object.keys(mappedData).forEach(key => {
       if (mappedData[key] === undefined) {
         delete mappedData[key];
+      } else if (mappedData[key] === '') {
+        // Convert empty strings to null for optional fields (except name and email which are required)
+        if (key !== 'name' && key !== 'email') {
+          mappedData[key] = null;
+        }
       }
     });
 
@@ -110,7 +123,31 @@ router.put('/profile', requireAuth, async (req, res) => {
 
   } catch (error) {
     logger.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Failed to update profile' });
+    
+    // Handle Sequelize validation errors
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      if (error.fields && error.fields.email) {
+        return res.status(409).json({ message: 'Email already exists. Please use a different email address.' });
+      }
+      return res.status(409).json({ message: 'A field with this value already exists' });
+    }
+    
+    // Handle Sequelize validation errors
+    if (error.name === 'SequelizeValidationError') {
+      const messages = error.errors.map(e => e.message).join(', ');
+      return res.status(400).json({ message: `Validation error: ${messages}` });
+    }
+    
+    // Handle database connection errors
+    if (error.name === 'SequelizeConnectionError' || error.name === 'SequelizeAccessDeniedError') {
+      return res.status(503).json({ message: 'Database connection error. Please try again later.' });
+    }
+    
+    // Generic error
+    res.status(500).json({ 
+      message: 'Failed to update profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

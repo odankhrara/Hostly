@@ -7,6 +7,8 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secrets.yaml
+  - zookeeper-deployment.yaml
+  - kafka-deployment.yaml
   - mysql-deployment.yaml
   - backend-deployment.yaml
   - agent-deployment.yaml

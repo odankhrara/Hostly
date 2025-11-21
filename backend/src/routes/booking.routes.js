@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Booking, Property, User } = require('../models');
+const kafkaService = require('../services/kafka.service');
 
 // POST /api/bookings - Create a new booking
 router.post('/', async (req, res) => {
@@ -58,6 +59,22 @@ router.post('/', async (req, res) => {
       num_guests: parseInt(guests),
       status: 'pending',
       total_price: totalPrice
+    });
+
+    // Publish booking created event to Kafka (async, don't wait)
+    kafkaService.publishBookingCreated({
+      id: booking.id,
+      property_id: booking.property_id,
+      traveler_id: booking.traveler_id,
+      start_date: booking.start_date,
+      end_date: booking.end_date,
+      num_guests: booking.num_guests,
+      status: booking.status,
+      total_price: parseFloat(booking.total_price),
+      created_at: booking.created_at
+    }).catch(err => {
+      console.error('Failed to publish booking-created event:', err);
+      // Don't fail the request if Kafka publish fails
     });
 
     res.status(201).json({ 
@@ -154,6 +171,18 @@ router.post('/:id/accept', async (req, res) => {
       updated_at: new Date()
     });
 
+    // Publish booking status updated event to Kafka (async, don't wait)
+    kafkaService.publishBookingStatusUpdated({
+      id: booking.id,
+      property_id: booking.property_id,
+      traveler_id: booking.traveler_id,
+      status: booking.status,
+      updated_at: booking.updated_at
+    }).catch(err => {
+      console.error('Failed to publish booking-status-updated event:', err);
+      // Don't fail the request if Kafka publish fails
+    });
+
     console.log('Booking accepted:', {
       id: booking.id,
       status: booking.status,
@@ -208,6 +237,18 @@ router.post('/:id/cancel', async (req, res) => {
     await booking.update({ 
       status: 'cancelled',
       updated_at: new Date()
+    });
+
+    // Publish booking status updated event to Kafka (async, don't wait)
+    kafkaService.publishBookingStatusUpdated({
+      id: booking.id,
+      property_id: booking.property_id,
+      traveler_id: booking.traveler_id,
+      status: booking.status,
+      updated_at: booking.updated_at
+    }).catch(err => {
+      console.error('Failed to publish booking-status-updated event:', err);
+      // Don't fail the request if Kafka publish fails
     });
 
     console.log('Booking cancelled:', {

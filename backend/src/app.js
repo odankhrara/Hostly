@@ -8,6 +8,8 @@ const path = require('path');
 const Logger = require('./config/logger');
 const { sequelize, testConnection } = require('./config/database');
 const mainRoutes = require('./routes'); // <- make sure routes/index.js exports a Router
+const kafkaService = require('./services/kafka.service');
+const bookingConsumerService = require('./services/booking-consumer.service');
 
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
@@ -92,6 +94,32 @@ const startServer = async () => {
       logger.warn('Some features requiring database access will not work until database is configured.');
     }
 
+    // Initialize Kafka producer
+    try {
+      await kafkaService.initializeProducer();
+    } catch (kafkaError) {
+      logger.warn('Kafka producer initialization failed, but continuing without it:', kafkaError.message);
+      logger.warn('Some features requiring Kafka will not work until Kafka is configured.');
+    }
+
+    // Start Kafka consumers (only if database is available)
+    try {
+      let dbConnected = false;
+      try {
+        await testConnection();
+        dbConnected = true;
+      } catch (dbErr) {
+        // Database not available, skip consumer initialization
+      }
+      
+      if (dbConnected) {
+        await bookingConsumerService.startConsumers();
+      }
+    } catch (consumerError) {
+      logger.warn('Kafka consumers initialization failed, but continuing without them:', consumerError.message);
+      logger.warn('Booking event processing will not work until Kafka consumers are configured.');
+    }
+
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
       if (!sequelize.authenticate) {
@@ -103,5 +131,18 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully...');
+  await kafkaService.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully...');
+  await kafkaService.disconnect();
+  process.exit(0);
+});
 
 startServer();

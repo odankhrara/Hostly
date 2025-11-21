@@ -51,9 +51,11 @@ export default function Profile() {
       setMessageType('success')
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
-      setMessage('Failed to update profile')
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile'
+      setMessage(errorMessage)
       setMessageType('error')
-      setTimeout(() => setMessage(''), 3000)
+      console.error('Profile update error:', error)
+      setTimeout(() => setMessage(''), 5000)
     }
   }
 
@@ -84,15 +86,23 @@ export default function Profile() {
       const { data } = await api.post('/traveler/profile/avatar', fd, { 
         headers: { 'Content-Type': 'multipart/form-data' } 
       })
+      console.log('Profile picture upload response:', data)
       // Update user state with new profile image
       setUser(data.user)
+      // Force form to update with new user data
+      setForm(prev => ({
+        ...prev,
+        // Keep form data but user state is updated
+      }))
       setMessage('Profile picture uploaded successfully')
       setMessageType('success')
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
-      setMessage('Failed to upload profile picture')
+      console.error('Profile picture upload error:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to upload profile picture'
+      setMessage(errorMessage)
       setMessageType('error')
-      setTimeout(() => setMessage(''), 3000)
+      setTimeout(() => setMessage(''), 5000)
     } finally { 
       setUploading(false)
       // Reset file input
@@ -109,14 +119,21 @@ export default function Profile() {
       }
       // Otherwise, construct the full URL using the API base URL
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-      const baseUrl = apiBaseUrl.replace('/api', '') // Remove /api to get base URL
-      // Ensure the URL starts with / if it doesn't already
+      // Remove /api from the end if present to get the base URL
+      const baseUrl = apiBaseUrl.endsWith('/api') 
+        ? apiBaseUrl.replace('/api', '') 
+        : apiBaseUrl.replace(/\/api$/, '') || 'http://localhost:3000'
+      
+      // Ensure the image path starts with /
       const imagePath = user.profile_image_url.startsWith('/') 
         ? user.profile_image_url 
         : `/${user.profile_image_url}`
-      // Add cache-busting parameter to ensure fresh image loads
+      
+      // Construct full URL with cache-busting
       const separator = imagePath.includes('?') ? '&' : '?'
-      return `${baseUrl}${imagePath}${separator}t=${Date.now()}`
+      const fullUrl = `${baseUrl}${imagePath}${separator}t=${Date.now()}`
+      console.log('Profile image URL:', fullUrl, 'from:', user.profile_image_url)
+      return fullUrl
     }
     return null
   }
@@ -136,12 +153,17 @@ export default function Profile() {
             <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-brand-100 shadow-lg relative">
               {getProfileImageUrl() ? (
                 <img 
-                  key={user?.profile_image_url} // Force re-render when image changes
+                  key={`${user?.id}-${user?.profile_image_url}`} // Force re-render when image changes
                   src={getProfileImageUrl()} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.error('Image load error:', e.target.src)
+                    console.error('Image load error:', {
+                      src: e.target.src,
+                      profile_image_url: user?.profile_image_url,
+                      constructedUrl: getProfileImageUrl(),
+                      userId: user?.id
+                    })
                     e.target.style.display = 'none'
                     const fallback = e.target.nextElementSibling
                     if (fallback) {
@@ -149,7 +171,10 @@ export default function Profile() {
                     }
                   }}
                   onLoad={() => {
-                    console.log('Image loaded successfully:', getProfileImageUrl())
+                    console.log('Image loaded successfully:', {
+                      src: getProfileImageUrl(),
+                      profile_image_url: user?.profile_image_url
+                    })
                   }}
                 />
               ) : null}

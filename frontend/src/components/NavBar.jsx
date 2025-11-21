@@ -15,11 +15,16 @@ export default function NavBar() {
       }
       // Otherwise, construct the full URL using the API base URL
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
-      const baseUrl = apiBaseUrl.replace('/api', '') // Remove /api to get base URL
-      // Ensure the URL starts with / if it doesn't already
+      // Remove /api from the end if present to get the base URL
+      const baseUrl = apiBaseUrl.endsWith('/api') 
+        ? apiBaseUrl.replace('/api', '') 
+        : apiBaseUrl.replace(/\/api$/, '') || 'http://localhost:3000'
+      
+      // Ensure the image path starts with /
       const imagePath = user.profile_image_url.startsWith('/') 
         ? user.profile_image_url 
         : `/${user.profile_image_url}`
+      
       return `${baseUrl}${imagePath}`
     }
     return null
