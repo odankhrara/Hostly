@@ -17,8 +17,9 @@ router.post('/', async (req, res) => {
     const end = new Date(endDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time to start of day
+    start.setHours(0, 0, 0, 0); // Normalize start date to start of day
 
-    // Check if start date is in the past
+    // Allow today and future dates (check-in can be today)
     if (start < today) {
       return res.status(400).json({ message: 'Check-in date cannot be in the past' });
     }

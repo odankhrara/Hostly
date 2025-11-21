@@ -6,6 +6,25 @@ import { LogOut, User, Home, LayoutDashboard } from 'lucide-react'
 export default function NavBar() {
   const { user, logout } = useAuth()
 
+  // Get profile image URL
+  const getProfileImageUrl = () => {
+    if (user?.profile_image_url) {
+      // If it's already a full URL, return it
+      if (user.profile_image_url.startsWith('http')) {
+        return user.profile_image_url
+      }
+      // Otherwise, construct the full URL using the API base URL
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+      const baseUrl = apiBaseUrl.replace('/api', '') // Remove /api to get base URL
+      // Ensure the URL starts with / if it doesn't already
+      const imagePath = user.profile_image_url.startsWith('/') 
+        ? user.profile_image_url 
+        : `/${user.profile_image_url}`
+      return `${baseUrl}${imagePath}`
+    }
+    return null
+  }
+
   return (
     <header className="border-b bg-white">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,6 +76,33 @@ export default function NavBar() {
 
             {user ? (
               <>
+                {/* Profile Picture */}
+                <Link
+                  to="/profile"
+                  className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-brand-200 hover:border-brand-400 transition-colors flex-shrink-0"
+                  title={user.name || 'Profile'}
+                >
+                  {getProfileImageUrl() ? (
+                    <img 
+                      src={getProfileImageUrl()} 
+                      alt={user.name || 'Profile'} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        const fallback = e.target.nextElementSibling
+                        if (fallback) {
+                          fallback.style.display = 'flex'
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-full h-full ${getProfileImageUrl() ? 'hidden' : 'flex'} items-center justify-center bg-gradient-to-br from-brand-100 to-blue-100`}
+                  >
+                    <User className="w-5 h-5 text-brand-600" />
+                  </div>
+                </Link>
+                
                 <NavLink
                   to="/profile"
                   className={({ isActive }) =>
@@ -65,7 +111,7 @@ export default function NavBar() {
                     }`
                   }
                 >
-                  <User className="w-4 h-4" /> Profile
+                  <span className="hidden sm:inline">Profile</span>
                 </NavLink>
                 <button
                   onClick={logout}

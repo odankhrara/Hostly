@@ -43,6 +43,40 @@ export default function PropertyDetails() {
     }
   }
 
+  // Calculate total price based on dates, price per night, and tax
+  const calculateTotalPrice = () => {
+    if (!booking.startDate || !booking.endDate || !p?.price_per_night) {
+      return null
+    }
+    
+    const start = new Date(booking.startDate)
+    const end = new Date(booking.endDate)
+    
+    if (end <= start) {
+      return null
+    }
+    
+    // Calculate number of nights
+    const timeDiff = end.getTime() - start.getTime()
+    const nights = Math.ceil(timeDiff / (1000 * 60 * 60 * 24))
+    
+    if (nights <= 0) {
+      return null
+    }
+    
+    // Calculate subtotal (nights × price per night)
+    const subtotal = nights * p.price_per_night
+    
+    // Calculate tax (if tax_rate exists)
+    const taxRate = p.tax_rate || 0
+    const taxAmount = (subtotal * taxRate) / 100
+    
+    // Calculate total (subtotal + tax)
+    const total = subtotal + taxAmount
+    
+    return { nights, subtotal, taxRate, taxAmount, total }
+  }
+
   const book = async (e) => {
     e.preventDefault()
     
@@ -51,7 +85,9 @@ export default function PropertyDetails() {
     const end = new Date(booking.endDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
+    start.setHours(0, 0, 0, 0) // Normalize start date to start of day
     
+    // Allow today and future dates
     if (start < today) {
       setMsg('Error: Check-in date cannot be in the past')
       return
@@ -113,10 +149,51 @@ export default function PropertyDetails() {
             ? p.amenities
             : 'No amenities listed'}
         </p>
-        <p className="mt-4 text-2xl font-bold">
-          ${p.price_per_night}
-          <span className="text-sm text-gray-600"> / night</span>
-        </p>
+        <div className="mt-4 border-t pt-4">
+          <p className="text-2xl font-bold">
+            ${p.price_per_night}
+            <span className="text-sm text-gray-600 font-normal"> / night</span>
+          </p>
+          
+          {/* Total Price Display */}
+          {(() => {
+            const priceInfo = calculateTotalPrice()
+            if (priceInfo) {
+              return (
+                <div className="mt-4 p-4 bg-brand-50 rounded-xl border border-brand-200">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-700">
+                        ${p.price_per_night} × {priceInfo.nights} {priceInfo.nights === 1 ? 'night' : 'nights'}
+                      </span>
+                      <span className="text-gray-900 font-medium">
+                        ${priceInfo.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {priceInfo.taxRate > 0 && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">
+                          Tax ({priceInfo.taxRate}%)
+                        </span>
+                        <span className="text-gray-700">
+                          ${priceInfo.taxAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-brand-200">
+                    <span className="text-lg font-semibold text-gray-900">Total</span>
+                    <span className="text-2xl font-bold text-brand-700">
+                      ${priceInfo.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              )
+            }
+            return null
+          })()}
+        </div>
+        
         <form onSubmit={book} className="mt-4 grid grid-cols-2 gap-3">
           <input 
             type="date" 

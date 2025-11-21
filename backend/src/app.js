@@ -80,17 +80,23 @@ app.use((err, req, res, next) => {
 
 const startServer = async () => {
   try {
-    await testConnection();
-    logger.info('Database connection verified.');
-
-    // await sequelize.sync({ alter: true });
-    // logger.info('All models were synchronized successfully.');
-
-    await sessionStore.sync();
-    logger.info('Session store synced.');
+    // Try to connect to database, but don't fail if it doesn't work
+    try {
+      await testConnection();
+      logger.info('Database connection verified.');
+      
+      await sessionStore.sync();
+      logger.info('Session store synced.');
+    } catch (dbError) {
+      logger.warn('Database connection failed, but continuing without it:', dbError.message);
+      logger.warn('Some features requiring database access will not work until database is configured.');
+    }
 
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
+      if (!sequelize.authenticate) {
+        logger.warn('⚠️  Running without database connection - some features may be limited');
+      }
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

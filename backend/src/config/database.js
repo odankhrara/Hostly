@@ -6,13 +6,17 @@ const logger = new Logger('Database');
 // This is the config object the CLI will read
 const config = {
   dialect: 'mysql',
-  host: process.env.DB_HOST,
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 3306,
   username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  password: process.env.DB_PASSWORD || undefined,
   database: process.env.DB_NAME,
-  dialectOptions: {
-    socketPath: '/tmp/mysql.sock'
-  },
+  // Use socket path only if DB_HOST is not set (local development)
+  ...(process.env.DB_HOST ? {} : {
+    dialectOptions: {
+      socketPath: '/tmp/mysql.sock'
+    }
+  }),
   logging: (msg) => logger.debug(msg),
   define: {
     timestamps: true,

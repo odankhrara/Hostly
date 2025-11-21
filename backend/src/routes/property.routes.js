@@ -23,7 +23,11 @@ router.get('/search', async (req, res) => {
         });
       }
       
-      // Check if check-in is in the past
+      // Normalize dates to start of day for comparison
+      start.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+      
+      // Allow today and future dates (check-in can be today)
       if (start < today) {
         return res.status(400).json({ 
           message: 'Check-in date cannot be in the past.',
@@ -84,7 +88,8 @@ router.get('/search', async (req, res) => {
       bathrooms: property.bathrooms,
       max_guests: property.max_guests,
       amenities: property.amenities ? property.amenities.split(',') : [],
-      main_image: property.main_image
+      main_image: property.main_image,
+      tax_rate: parseFloat(property.tax_rate || 0)
     }));
 
     res.json({ properties: formattedProperties });
@@ -118,6 +123,7 @@ router.get('/:id', async (req, res) => {
       max_guests: property.max_guests,
       amenities: property.amenities ? property.amenities.split(',') : [],
       main_image: property.main_image,
+      tax_rate: parseFloat(property.tax_rate || 0),
       description: property.description,
       photos: [
         property.main_image || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=600&fit=crop&crop=entropy&cs=tinysrgb',

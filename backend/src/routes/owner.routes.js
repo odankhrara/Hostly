@@ -42,6 +42,7 @@ router.get('/properties', async (req, res) => {
         max_guests: property.max_guests,
         amenities: property.amenities ? property.amenities.split(',') : [],
         main_image: property.main_image,
+        tax_rate: parseFloat(property.tax_rate || 0),
         status: "active",
         total_bookings: acceptedBookings, // Count of accepted bookings
         created_at: property.created_at
@@ -58,7 +59,7 @@ router.get('/properties', async (req, res) => {
 // POST /api/owner/properties - Create new property
 router.post('/properties', upload.single('mainImage'), async (req, res) => {
   try {
-    const { name, type, location, description, pricing, amenities, bedrooms, bathrooms, availabilityFrom, availabilityTo } = req.body;
+    const { name, type, location, description, pricing, amenities, bedrooms, bathrooms, availabilityFrom, availabilityTo, taxRate } = req.body;
     
     // Validate required fields
     if (!name || !type || !location || !pricing) {
@@ -98,6 +99,7 @@ router.post('/properties', upload.single('mainImage'), async (req, res) => {
       max_guests: parseInt(bedrooms) * 2 || 2,
       amenities: Array.isArray(amenities) ? amenities.join(',') : amenities || '',
       main_image: mainImageUrl,
+      tax_rate: taxRate ? parseFloat(taxRate) : 0,
       owner_id: userId
     });
 
@@ -114,6 +116,7 @@ router.post('/properties', upload.single('mainImage'), async (req, res) => {
         max_guests: newProperty.max_guests,
         amenities: newProperty.amenities ? newProperty.amenities.split(',') : [],
         main_image: newProperty.main_image,
+        tax_rate: parseFloat(newProperty.tax_rate || 0),
         status: "active",
         created_at: newProperty.created_at
       }

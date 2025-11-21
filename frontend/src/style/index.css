@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-CSS
 
 :root { color-scheme: light; }
 
@@ -15,3 +14,21 @@ CSS
 * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.delay-700 {
+  animation-delay: 700ms;
+}

@@ -13,6 +13,7 @@ export default function TravelerDashboard() {
   const [bookings, setBookings] = useState([])
   const [showAISearch, setShowAISearch] = useState(false)
   const [error, setError] = useState('')
+  const [searching, setSearching] = useState(false)
 
   const validateDates = () => {
     if (!filters.startDate || !filters.endDate) return true
@@ -20,8 +21,10 @@ export default function TravelerDashboard() {
     const start = new Date(filters.startDate)
     const end = new Date(filters.endDate)
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    start.setHours(0, 0, 0, 0) // Normalize start date to start of day
     
-    // Check if check-in is in the past
+    // Allow today and future dates (check-in can be today)
     if (start < today) {
       setError('Check-in date cannot be in the past.')
       return false
@@ -46,14 +49,18 @@ export default function TravelerDashboard() {
   const search = async (e) => {
     if (e) e.preventDefault()
     
+    // Prevent multiple simultaneous searches
+    if (searching) return
+    
     // Clear previous errors
     setError('')
     
-    // Validate dates
-    if (!validateDates()) {
+    // Validate dates (skip validation on initial load)
+    if (e && !validateDates()) {
       return
     }
     
+    setSearching(true)
     try {
       const { data } = await api.get('/properties/search', { params: filters })
       setList(data.properties || [])
@@ -64,6 +71,8 @@ export default function TravelerDashboard() {
       } else {
         setError('Search failed. Please try again.')
       }
+    } finally {
+      setSearching(false)
     }
   }
 
@@ -80,7 +89,19 @@ export default function TravelerDashboard() {
     try { const { data } = await api.get('/bookings/me'); setBookings(data.bookings || []) } catch {}
   }
 
-  useEffect(()=>{ loadFavs(); loadBookings(); }, [])
+  useEffect(()=>{ 
+    loadFavs(); 
+    loadBookings(); 
+    // Load properties by default when component mounts (without filters)
+    search();
+  }, [])
+
+  // Load properties when search tab becomes active (if list is empty)
+  useEffect(() => {
+    if (tab === 'search' && list.length === 0) {
+      search();
+    }
+  }, [tab])
 
   const toggleFav = async (p) => {
     try {
@@ -151,13 +172,16 @@ export default function TravelerDashboard() {
       {tab==='history' && (
         <div className="bg-white rounded-2xl shadow p-4 overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead><tr className="text-left"><th className="p-2">Property</th><th className="p-2">Dates</th><th className="p-2">Guests</th><th className="p-2">Status</th></tr></thead>
+            <thead><tr className="text-left"><th className="p-2">Property</th><th className="p-2">Dates</th><th className="p-2">Guests</th><th className="p-2">Price</th><th className="p-2">Status</th></tr></thead>
             <tbody>
               {bookings.map(b => (
                 <tr key={b.id} className="border-t">
                   <td className="p-2">{b.propertyName}</td>
                   <td className="p-2">{b.startDate} → {b.endDate}</td>
                   <td className="p-2">{b.guests}</td>
+                  <td className="p-2 font-semibold text-brand-700">
+                    ${b.total_price ? b.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  </td>
                   <td className="p-2"><BookingStatusBadge status={b.status} /></td>
                 </tr>
               ))}

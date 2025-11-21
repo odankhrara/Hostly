@@ -67,6 +67,12 @@ Property.init({
     main_image: {             // Single image field
         type: DataTypes.STRING(255),
         allowNull: true,
+    },
+    tax_rate: {               // Tax rate as percentage (e.g., 10.5 for 10.5%)
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'Tax rate percentage based on city/location'
     }
 }, {
     sequelize,

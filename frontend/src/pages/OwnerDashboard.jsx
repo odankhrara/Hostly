@@ -64,7 +64,7 @@ export default function OwnerDashboard() {
       <div className="bg-white rounded-2xl shadow p-4 overflow-x-auto">
         <h2 className="text-xl font-semibold mb-3">Booking Requests</h2>
         <table className="min-w-full text-sm">
-          <thead><tr className="text-left"><th className="p-2">Property</th><th className="p-2">Guest</th><th className="p-2">Dates</th><th className="p-2">Guests</th><th className="p-2">Status</th><th className="p-2">Actions</th></tr></thead>
+          <thead><tr className="text-left"><th className="p-2">Property</th><th className="p-2">Guest</th><th className="p-2">Dates</th><th className="p-2">Guests</th><th className="p-2">Price</th><th className="p-2">Status</th><th className="p-2">Actions</th></tr></thead>
           <tbody>
             {bookings.map(b=>(
               <tr key={b.id} className="border-t">
@@ -72,6 +72,9 @@ export default function OwnerDashboard() {
                 <td className="p-2">{b.travelerName}</td>
                 <td className="p-2">{b.start_date} → {b.end_date}</td>
                 <td className="p-2">{b.num_guests}</td>
+                <td className="p-2 font-semibold text-brand-700">
+                  ${b.total_price ? b.total_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                </td>
                 <td className="p-2"><BookingStatusBadge status={b.status} /></td>
                 <td className="p-2 space-x-2">
                   <button 

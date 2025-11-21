@@ -46,6 +46,17 @@ exports.register = async (req, res, next) => {
     return ok(res, { user: req.session.user }, 201);
   } catch (err) {
     console.error('Register error:', err);
+    
+    // Provide user-friendly error messages for database connection issues
+    if (err.name === 'SequelizeConnectionError' || err.name === 'SequelizeAccessDeniedError') {
+      return bad(res, 'Database connection error. Please contact the administrator.', 503);
+    }
+    
+    // Handle other Sequelize errors
+    if (err.name && err.name.startsWith('Sequelize')) {
+      return bad(res, err.message || 'Database error occurred', 500);
+    }
+    
     return next(err);
   }
 };
@@ -104,7 +115,7 @@ exports.getCurrentUser = async (req, res, _next) => {
   try {
     // Fetch fresh user data from database
     const user = await User.findByPk(req.session.user.id, {
-      attributes: ['id', 'name', 'email', 'role', 'phone_number', 'about_me', 'city', 'country', 'languages', 'gender', 'profile_image_url']
+      attributes: ['id', 'name', 'email', 'role', 'phone_number', 'about_me', 'city', 'state', 'country', 'languages', 'gender', 'profile_image_url']
     });
 
     if (!user) {
@@ -122,6 +133,7 @@ exports.getCurrentUser = async (req, res, _next) => {
       phone: user.phone_number,  // Map phone_number to phone
       about: user.about_me,     // Map about_me to about
       city: user.city,
+      state: user.state,
       country: user.country,
       languages: user.languages,
       gender: user.gender,
