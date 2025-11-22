@@ -158,8 +158,25 @@ export default function TravelerDashboard() {
       )}
 
       {tab==='search' && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {list.map(p => <PropertyCard key={p.id} p={p} onFavToggle={toggleFav} isFav={favorites.some(f=>f.id===p.id)} />)}
+        <div>
+          {list.length === 0 && !searching ? (
+            <div className="bg-white rounded-2xl shadow p-8 text-center">
+              <p className="text-gray-600 text-lg mb-2">No properties found</p>
+              <p className="text-gray-500 text-sm">
+                {filters.location || filters.startDate || filters.endDate 
+                  ? 'Try adjusting your search filters or clearing them to see all available properties.'
+                  : 'No properties are available yet. Properties will appear here once owners create listings.'}
+              </p>
+            </div>
+          ) : searching ? (
+            <div className="bg-white rounded-2xl shadow p-8 text-center">
+              <p className="text-gray-600">Searching properties...</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {list.map(p => <PropertyCard key={p.id} p={p} onFavToggle={toggleFav} isFav={favorites.some(f=>f.id===p.id)} />)}
+            </div>
+          )}
         </div>
       )}
 

@@ -11,6 +11,9 @@ const mainRoutes = require('./routes'); // <- make sure routes/index.js exports 
 const kafkaService = require('./services/kafka.service');
 const bookingConsumerService = require('./services/booking-consumer.service');
 
+// Import models to ensure they're loaded and associations are defined
+require('./models');
+
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const logger = new Logger('App');
@@ -86,6 +89,10 @@ const startServer = async () => {
     try {
       await testConnection();
       logger.info('Database connection verified.');
+      
+      // Sync all models to create tables (if they don't exist)
+      await sequelize.sync({ alter: false });
+      logger.info('Database tables synchronized successfully.');
       
       await sessionStore.sync();
       logger.info('Session store synced.');
