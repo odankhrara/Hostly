@@ -27,24 +27,65 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Detect OS and package manager
+detect_package_manager() {
+    if command_exists apt; then
+        PKG_MANAGER="apt"
+        UPDATE_CMD="sudo apt update"
+        UPGRADE_CMD="sudo apt upgrade -y"
+        INSTALL_CMD="sudo apt install -y"
+    elif command_exists yum; then
+        PKG_MANAGER="yum"
+        UPDATE_CMD="sudo yum update -y"
+        UPGRADE_CMD="sudo yum upgrade -y"
+        INSTALL_CMD="sudo yum install -y"
+    elif command_exists dnf; then
+        PKG_MANAGER="dnf"
+        UPDATE_CMD="sudo dnf update -y"
+        UPGRADE_CMD="sudo dnf upgrade -y"
+        INSTALL_CMD="sudo dnf install -y"
+    else
+        echo -e "${RED}Error: Could not detect package manager${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}Detected package manager: ${PKG_MANAGER}${NC}"
+}
+
+# Detect OS
+detect_package_manager
+
 # Step 1: Update system
 echo -e "${BLUE}[1/10] Updating system packages...${NC}"
-sudo apt update && sudo apt upgrade -y
+$UPDATE_CMD
+$UPGRADE_CMD
 echo -e "${GREEN}✓ System updated${NC}"
 echo ""
 
 # Step 2: Install required packages
 echo -e "${BLUE}[2/10] Installing required packages...${NC}"
-sudo apt install -y \
-    git \
-    curl \
-    wget \
-    unzip \
-    ca-certificates \
-    gnupg \
-    lsb-release \
-    netcat-openbsd \
-    openssl
+if [ "$PKG_MANAGER" = "apt" ]; then
+    $INSTALL_CMD \
+        git \
+        curl \
+        wget \
+        unzip \
+        ca-certificates \
+        gnupg \
+        lsb-release \
+        netcat-openbsd \
+        openssl
+else
+    # For Amazon Linux / CentOS / RHEL
+    $INSTALL_CMD \
+        git \
+        curl \
+        wget \
+        unzip \
+        ca-certificates \
+        gnupg2 \
+        nc \
+        openssl
+fi
 echo -e "${GREEN}✓ Packages installed${NC}"
 echo ""
 
