@@ -4,9 +4,10 @@ metadata:
   name: hostly-config
   namespace: hostly
 data:
-  DB_NAME: "hostly"
-  DB_USER: "root"
-  DB_PORT: "3306"
+  MONGODB_DB: "hostly"
+  MONGODB_USER: "root"
+  MONGODB_PORT: "27017"
+  MONGODB_HOST: "mongodb"
   NODE_ENV: "production"
   PORT: "3000"
   HOST: "0.0.0.0"

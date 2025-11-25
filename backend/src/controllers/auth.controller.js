@@ -1,5 +1,4 @@
 // src/controllers/auth.controller.js
-const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 
 const ok = (res, data, status = 200) => res.status(status).json(data);
@@ -21,23 +20,23 @@ exports.register = async (req, res, next) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ where: { email } });
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return bad(res, 'Email already exists', 409);
     }
 
     // Create user in database
-    // Note: Password will be hashed by the User model's beforeCreate hook
+    // Password will be hashed by the User model's pre('save') hook
     const user = await User.create({
       name,
-      email,
-      password, // Don't hash here - model does it
+      email: email.toLowerCase(),
+      password, // Model will hash this automatically
       role: normRole
     });
 
     // Create session
     req.session.user = {
-      id: user.id,
+      id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role
@@ -54,13 +53,12 @@ exports.register = async (req, res, next) => {
   } catch (err) {
     console.error('Register error:', err);
     
-    // Provide user-friendly error messages for database connection issues
-    if (err.name === 'SequelizeConnectionError' || err.name === 'SequelizeAccessDeniedError') {
-      return bad(res, 'Database connection error. Please contact the administrator.', 503);
+    // Handle MongoDB/Mongoose errors
+    if (err.name === 'MongoServerError' && err.code === 11000) {
+      return bad(res, 'Email already exists', 409);
     }
     
-    // Handle other Sequelize errors
-    if (err.name && err.name.startsWith('Sequelize')) {
+    if (err.name === 'MongooseError' || err.name === 'ValidationError') {
       return bad(res, err.message || 'Database error occurred', 500);
     }
     
@@ -77,21 +75,21 @@ exports.login = async (req, res, next) => {
       return bad(res, 'Missing credentials', 400);
     }
 
-    // Find user in database
-    const user = await User.findOne({ where: { email } });
+    // Find user in database (need to select password field)
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
       return bad(res, 'Invalid email or password', 401);
     }
 
-    // Verify password (compare with hashed password in DB)
-    const match = await bcrypt.compare(password, user.password);
+    // Verify password using model method
+    const match = await user.comparePassword(password);
     if (!match) {
       return bad(res, 'Invalid email or password', 401);
     }
 
     // Create session
     req.session.user = {
-      id: user.id,
+      id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role
@@ -121,9 +119,8 @@ exports.getCurrentUser = async (req, res, _next) => {
 
   try {
     // Fetch fresh user data from database
-    const user = await User.findByPk(req.session.user.id, {
-      attributes: ['id', 'name', 'email', 'role', 'phone_number', 'about_me', 'city', 'state', 'country', 'languages', 'gender', 'profile_image_url']
-    });
+    const user = await User.findById(req.session.user.id)
+      .select('name email role phone_number about_me city state country languages gender profile_image_url');
 
     if (!user) {
       // User was deleted, clear session
@@ -133,7 +130,7 @@ exports.getCurrentUser = async (req, res, _next) => {
 
     // Map database field names to frontend field names
     const userData = {
-      id: user.id,
+      id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: user.role,

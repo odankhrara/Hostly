@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { Property } = require('../models');
-const { Op } = require('sequelize');
 
 
 // GET /api/properties/search - Search properties
@@ -53,33 +53,34 @@ router.get('/search', async (req, res) => {
       }
     }
     
-    // Build search conditions
-    const whereConditions = {};
+    // Build search conditions for Mongoose
+    const queryConditions = {};
     
-    // Filter by location (city or state)
+    // Filter by location (city, state, or country)
     if (location && location.trim()) {
-      const locationLower = location.toLowerCase();
-      whereConditions[Op.or] = [
-        { city: { [Op.like]: `%${locationLower}%` } },
-        { state: { [Op.like]: `%${locationLower}%` } },
-        { country: { [Op.like]: `%${locationLower}%` } }
+      const locationRegex = new RegExp(location.trim(), 'i'); // Case-insensitive
+      queryConditions.$or = [
+        { city: locationRegex },
+        { state: locationRegex },
+        { country: locationRegex }
       ];
     }
     
     // Filter by guest capacity
     if (guests && !isNaN(guests)) {
-      whereConditions.max_guests = { [Op.gte]: parseInt(guests) };
+      queryConditions.max_guests = { $gte: parseInt(guests) };
     }
     
+    // Exclude test properties (properties with "test" in the name)
+    queryConditions.name = { $not: /^test\s+property|testproperty|test\s*property|^dummy\s+property|^sample\s+property|^example\s+property/i };
+    
     // Get properties from database with filters
-    const properties = await Property.findAll({
-      where: whereConditions,
-      order: [['created_at', 'DESC']]
-    });
+    const properties = await Property.find(queryConditions)
+      .sort({ createdAt: -1 });
 
     // Format the response to match frontend expectations
     const formattedProperties = properties.map(property => ({
-      id: property.id,
+      id: property._id.toString(),
       name: property.name,
       location: `${property.city}, ${property.state}`,
       property_type: property.property_type,
@@ -104,8 +105,13 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid property ID' });
+    }
+    
     // Find property by ID from database
-    const property = await Property.findByPk(id);
+    const property = await Property.findById(id);
     
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
@@ -113,7 +119,7 @@ router.get('/:id', async (req, res) => {
 
     // Format the response to match frontend expectations
     const formattedProperty = {
-      id: property.id,
+      id: property._id.toString(),
       name: property.name,
       location: `${property.city}, ${property.state}`,
       property_type: property.property_type,

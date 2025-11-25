@@ -74,16 +74,13 @@ router.post('/property-recommendations', async (req, res) => {
     );
 
     // Also get actual properties from database that match criteria
-    const properties = await Property.findAll({
-      where: {
-        city: location.split(',')[0].trim(), // Extract city from location
-        max_guests: {
-          [require('sequelize').Op.gte]: guests
-        }
-      },
-      limit: 10,
-      order: [['created_at', 'DESC']]
-    });
+    const cityName = location.split(',')[0].trim(); // Extract city from location
+    const properties = await Property.find({
+      city: cityName,
+      max_guests: { $gte: parseInt(guests) }
+    })
+      .limit(10)
+      .sort({ createdAt: -1 });
 
     res.json({
       ...recommendations,

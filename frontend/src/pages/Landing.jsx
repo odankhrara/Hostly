@@ -1,10 +1,11 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { MapPin, Star, Users, Home, Sparkles, ArrowRight, Shield } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAppSelector } from '../store/hooks'
+import { selectUser } from '../store/selectors'
 
 export default function Landing() {
-  const { user } = useAuth()
+  const user = useAppSelector(selectUser)
   const navigate = useNavigate()
 
   const handleTravelerClick = (e) => {

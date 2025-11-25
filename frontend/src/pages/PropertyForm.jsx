@@ -71,7 +71,9 @@ export default function PropertyForm() {
     }
 
     setAiLoading(true)
+    setMessage('')
     try {
+      console.log('Requesting description generation...')
       const { data } = await api.post('/agent/generate-description', {
         propertyData: {
           name: form.name,
@@ -84,10 +86,16 @@ export default function PropertyForm() {
         }
       })
       
-      setForm(prev => ({ ...prev, description: data.description }))
-      setAiSuggestions(data)
-      setMessage('AI-generated description added!')
+      console.log('Description received:', data)
+      if (data && data.description) {
+        setForm(prev => ({ ...prev, description: data.description }))
+        setAiSuggestions(data)
+        setMessage('AI-generated description added!')
+      } else {
+        setMessage('Received invalid description data from server')
+      }
     } catch (error) {
+      console.error('Description generation error:', error)
       setMessage('Failed to generate description: ' + (error.response?.data?.message || error.message))
     } finally {
       setAiLoading(false)
@@ -101,7 +109,9 @@ export default function PropertyForm() {
     }
 
     setAiLoading(true)
+    setMessage('')
     try {
+      console.log('Requesting pricing suggestions...')
       const { data } = await api.post('/agent/pricing-suggestions', {
         propertyData: {
           location: form.location,
@@ -117,9 +127,16 @@ export default function PropertyForm() {
         }
       })
       
-      setAiSuggestions(data)
-      setMessage(`AI suggests base price: $${data.basePrice}/night`)
+      console.log('Pricing suggestions received:', data)
+      if (data && data.basePrice) {
+        setForm(prev => ({ ...prev, pricing: data.basePrice }))
+        setAiSuggestions(data)
+        setMessage(`AI suggests base price: $${data.basePrice}/night`)
+      } else {
+        setMessage('Received invalid pricing data from server')
+      }
     } catch (error) {
+      console.error('Pricing suggestions error:', error)
       setMessage('Failed to get pricing suggestions: ' + (error.response?.data?.message || error.message))
     } finally {
       setAiLoading(false)

@@ -1,6 +1,7 @@
 const { Booking, Property, User } = require('../models');
 const kafkaService = require('./kafka.service');
 const Logger = require('../config/logger');
+const mongoose = require('mongoose');
 
 const logger = new Logger('BookingConsumerService');
 
@@ -9,21 +10,16 @@ async function handleBookingCreated(bookingData) {
   try {
     logger.info(`Processing booking created event for booking ${bookingData.id}`);
     
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(bookingData.id)) {
+      logger.warn(`Invalid booking ID in event: ${bookingData.id}`);
+      return;
+    }
+    
     // Fetch booking with related data
-    const booking = await Booking.findByPk(bookingData.id, {
-      include: [
-        {
-          model: Property,
-          as: 'property',
-          attributes: ['id', 'name', 'owner_id']
-        },
-        {
-          model: User,
-          as: 'traveler',
-          attributes: ['id', 'name', 'email']
-        }
-      ]
-    });
+    const booking = await Booking.findById(bookingData.id)
+      .populate('property_id', 'name owner_id')
+      .populate('traveler_id', 'name email');
 
     if (!booking) {
       logger.warn(`Booking ${bookingData.id} not found in database`);
@@ -31,7 +27,7 @@ async function handleBookingCreated(bookingData) {
     }
 
     // Log the booking for owner notification
-    logger.info(`Booking ${booking.id} created for property ${booking.property.name} by traveler ${booking.traveler.name}`);
+    logger.info(`Booking ${booking._id.toString()} created for property ${booking.property_id?.name || 'Unknown'} by traveler ${booking.traveler_id?.name || 'Unknown'}`);
     
     // Here you could add additional processing:
     // - Send email notification to owner
@@ -48,21 +44,16 @@ async function handleBookingStatusUpdated(bookingData) {
   try {
     logger.info(`Processing booking status updated event for booking ${bookingData.id}`);
     
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(bookingData.id)) {
+      logger.warn(`Invalid booking ID in event: ${bookingData.id}`);
+      return;
+    }
+    
     // Fetch booking with related data
-    const booking = await Booking.findByPk(bookingData.id, {
-      include: [
-        {
-          model: Property,
-          as: 'property',
-          attributes: ['id', 'name']
-        },
-        {
-          model: User,
-          as: 'traveler',
-          attributes: ['id', 'name', 'email']
-        }
-      ]
-    });
+    const booking = await Booking.findById(bookingData.id)
+      .populate('property_id', 'name')
+      .populate('traveler_id', 'name email');
 
     if (!booking) {
       logger.warn(`Booking ${bookingData.id} not found in database`);
@@ -70,7 +61,7 @@ async function handleBookingStatusUpdated(bookingData) {
     }
 
     // Log the status update for traveler notification
-    logger.info(`Booking ${booking.id} status updated to ${booking.status} for traveler ${booking.traveler.name}`);
+    logger.info(`Booking ${booking._id.toString()} status updated to ${booking.status} for traveler ${booking.traveler_id?.name || 'Unknown'}`);
     
     // Here you could add additional processing:
     // - Send email notification to traveler
@@ -106,4 +97,3 @@ module.exports = {
   handleBookingCreated,
   handleBookingStatusUpdated
 };
-

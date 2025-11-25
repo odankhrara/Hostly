@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import api from '../services/api'
 import { COUNTRIES } from '../utils/countries'
-import { useAuth } from '../context/AuthContext'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { selectUser } from '../store/selectors'
+import { setUser } from '../store/slices/authSlice'
 import { User, Camera, CheckCircle } from 'lucide-react'
 
 export default function Profile() {
-  const { user, setUser } = useAuth()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const updateUser = (userData) => {
+    dispatch(setUser(userData))
+  }
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -46,7 +52,7 @@ export default function Profile() {
       // Remove internal fields before sending
       const { _lastImageUrl, ...formData } = form
       const { data } = await api.put('/traveler/profile', formData)
-      setUser(data.user)
+      updateUser(data.user)
       setMessage('Profile updated successfully')
       setMessageType('success')
       setTimeout(() => setMessage(''), 3000)
@@ -88,7 +94,7 @@ export default function Profile() {
       })
       console.log('Profile picture upload response:', data)
       // Update user state with new profile image
-      setUser(data.user)
+      updateUser(data.user)
       // Force form to update with new user data
       setForm(prev => ({
         ...prev,

@@ -1,46 +1,58 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+const mongoose = require('mongoose');
 const Logger = require('./logger');
 
 const logger = new Logger('Database');
 
-// This is the config object the CLI will read
-const config = {
-  dialect: 'mysql',
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  username: process.env.DB_USER,
-  password: (process.env.DB_PASSWORD && process.env.DB_PASSWORD.trim() !== '') ? process.env.DB_PASSWORD : undefined,
-  database: process.env.DB_NAME,
-  // Use socket path only if DB_HOST is not set (local development)
-  ...(process.env.DB_HOST ? {} : {
-    dialectOptions: {
-      socketPath: '/tmp/mysql.sock'
-    }
-  }),
-  logging: (msg) => logger.debug(msg),
-  define: {
-    timestamps: true,
-    underscored: true
-  }
+// MongoDB connection string
+const MONGODB_URI = process.env.MONGODB_URI || 
+  (process.env.MONGODB_USER && process.env.MONGODB_PASSWORD
+    ? `mongodb://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_HOST || 'localhost'}:${process.env.MONGODB_PORT || 27017}/${process.env.MONGODB_DB || 'hostly'}?authSource=admin`
+    : `mongodb://${process.env.MONGODB_HOST || 'localhost'}:${process.env.MONGODB_PORT || 27017}/${process.env.MONGODB_DB || 'hostly'}`);
+
+// MongoDB connection options
+const options = {
+  // Remove deprecated options for newer mongoose versions
 };
 
-const { Sequelize } = require('sequelize');
-const sequelize = new Sequelize(config);
-
+// Test connection function
 const testConnection = async () => {
   try {
-    await sequelize.authenticate();
-    logger.info('Database connection established successfully.');
+    if (mongoose.connection.readyState === 1) {
+      logger.info('MongoDB connection already established.');
+      return;
+    }
+    
+    await mongoose.connect(MONGODB_URI, options);
+    logger.info('MongoDB connection established successfully.');
   } catch (error) {
-    logger.error('Unable to connect to the database:', error);
+    logger.error('Unable to connect to MongoDB:', error);
     throw error;
   }
 };
 
+// Handle connection events
+mongoose.connection.on('connected', () => {
+  logger.info('Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  logger.error('Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  logger.warn('Mongoose disconnected from MongoDB');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  logger.info('MongoDB connection closed due to application termination');
+  process.exit(0);
+});
+
 module.exports = {
-  sequelize,
+  mongoose,
   testConnection,
-  development: config,
-  test: config,
-  production: config
+  MONGODB_URI
 };

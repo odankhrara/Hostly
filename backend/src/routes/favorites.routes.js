@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { Favorite, Property, User } = require('../models');
 
 // Middleware to check if user is authenticated
@@ -15,30 +16,27 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     
-    const favorites = await Favorite.findAll({
-      where: { traveler_id: userId },
-      include: [
-        {
-          model: Property,
-          as: 'property',
-          attributes: ['id', 'name', 'city', 'state', 'property_type', 'price_per_night', 'bedrooms', 'bathrooms', 'max_guests', 'main_image']
-        }
-      ],
-      order: [['created_at', 'DESC']]
-    });
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+
+    const favorites = await Favorite.find({ traveler_id: new mongoose.Types.ObjectId(userId) })
+      .populate('property_id', 'name city state property_type price_per_night bedrooms bathrooms max_guests main_image')
+      .sort({ createdAt: -1 });
 
     // Format the response to match frontend expectations
     const formattedFavorites = favorites.map(favorite => ({
-      id: favorite.property.id,
-      name: favorite.property.name,
-      location: `${favorite.property.city}, ${favorite.property.state}`,
-      property_type: favorite.property.property_type,
-      price_per_night: parseFloat(favorite.property.price_per_night),
-      bedrooms: favorite.property.bedrooms,
-      bathrooms: favorite.property.bathrooms,
-      max_guests: favorite.property.max_guests,
-      main_image: favorite.property.main_image,
-      favorited_at: favorite.created_at
+      id: favorite.property_id._id.toString(),
+      name: favorite.property_id.name,
+      location: `${favorite.property_id.city}, ${favorite.property_id.state}`,
+      property_type: favorite.property_id.property_type,
+      price_per_night: parseFloat(favorite.property_id.price_per_night),
+      bedrooms: favorite.property_id.bedrooms,
+      bathrooms: favorite.property_id.bathrooms,
+      max_guests: favorite.property_id.max_guests,
+      main_image: favorite.property_id.main_image,
+      favorited_at: favorite.createdAt
     }));
 
     res.json({ favorites: formattedFavorites });
@@ -58,15 +56,24 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Property ID is required' });
     }
 
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+      return res.status(400).json({ message: 'Invalid property ID' });
+    }
+
     // Check if property exists
-    const property = await Property.findByPk(propertyId);
+    const property = await Property.findById(propertyId);
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
 
     // Check if already favorited
     const existingFavorite = await Favorite.findOne({
-      where: { traveler_id: userId, property_id: propertyId }
+      traveler_id: new mongoose.Types.ObjectId(userId),
+      property_id: new mongoose.Types.ObjectId(propertyId)
     });
 
     if (existingFavorite) {
@@ -75,21 +82,25 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Add to favorites
     const favorite = await Favorite.create({
-      traveler_id: userId,
-      property_id: propertyId
+      traveler_id: new mongoose.Types.ObjectId(userId),
+      property_id: new mongoose.Types.ObjectId(propertyId)
     });
 
     res.status(201).json({ 
       message: 'Property added to favorites',
       favorite: {
-        id: favorite.id,
-        traveler_id: favorite.traveler_id,
-        property_id: favorite.property_id,
-        created_at: favorite.created_at
+        id: favorite._id.toString(),
+        traveler_id: favorite.traveler_id.toString(),
+        property_id: favorite.property_id.toString(),
+        created_at: favorite.createdAt
       }
     });
   } catch (error) {
     console.error('Add favorite error:', error);
+    // Handle duplicate key error (unique constraint)
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'Property already in favorites' });
+    }
     res.status(500).json({ message: 'Failed to add to favorites' });
   }
 });
@@ -100,15 +111,22 @@ router.delete('/:propertyId', requireAuth, async (req, res) => {
     const { propertyId } = req.params;
     const userId = req.session.user.id;
 
-    const favorite = await Favorite.findOne({
-      where: { traveler_id: userId, property_id: propertyId }
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+      return res.status(400).json({ message: 'Invalid property ID' });
+    }
+
+    const favorite = await Favorite.findOneAndDelete({
+      traveler_id: new mongoose.Types.ObjectId(userId),
+      property_id: new mongoose.Types.ObjectId(propertyId)
     });
 
     if (!favorite) {
       return res.status(404).json({ message: 'Property not found in favorites' });
     }
-
-    await favorite.destroy();
 
     res.json({ message: 'Property removed from favorites' });
   } catch (error) {
@@ -123,8 +141,17 @@ router.get('/check/:propertyId', requireAuth, async (req, res) => {
     const { propertyId } = req.params;
     const userId = req.session.user.id;
 
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+      return res.status(400).json({ message: 'Invalid property ID' });
+    }
+
     const favorite = await Favorite.findOne({
-      where: { traveler_id: userId, property_id: propertyId }
+      traveler_id: new mongoose.Types.ObjectId(userId),
+      property_id: new mongoose.Types.ObjectId(propertyId)
     });
 
     res.json({ isFavorited: !!favorite });

@@ -1,57 +1,23 @@
-const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../config/database');
-const User = require('./user');
-const Property = require('./property');
+const mongoose = require('mongoose');
 
-class Favorite extends Model {}
-
-Favorite.init({
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    traveler_id: {            // Changed from user_id to be more specific
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
-    },
-    property_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Property,
-            key: 'id',
-        },
-    }
+const favoriteSchema = new mongoose.Schema({
+  traveler_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  property_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Property',
+    required: true
+  }
 }, {
-    sequelize,
-    modelName: 'Favorite',
-    tableName: 'favorites',
-    underscored: true,
-    timestamps: true,
-    indexes: [{                // Added unique constraint
-        unique: true,
-        fields: ['traveler_id', 'property_id']
-    }]
+  timestamps: true
 });
 
-// Associations
-User.belongsToMany(Property, {
-    through: Favorite,
-    foreignKey: 'traveler_id',
-    otherKey: 'property_id',
-    as: 'favoriteProperties'
-});
+// Unique constraint: one user can favorite a property only once
+favoriteSchema.index({ traveler_id: 1, property_id: 1 }, { unique: true });
 
-Property.belongsToMany(User, {
-    through: Favorite,
-    foreignKey: 'property_id',
-    otherKey: 'traveler_id',
-    as: 'favoritedByUsers'
-});
+const Favorite = mongoose.model('Favorite', favoriteSchema);
 
 module.exports = Favorite;

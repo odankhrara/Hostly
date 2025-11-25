@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const User = require('../models/user');
 const Logger = require('../config/logger');
 const multer = require('multer');
@@ -56,6 +57,11 @@ router.put('/profile', requireAuth, async (req, res) => {
       logger.error('No user ID in session');
       return res.status(401).json({ message: 'Authentication required' });
     }
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
     
     const updateData = req.body;
     
@@ -64,11 +70,11 @@ router.put('/profile', requireAuth, async (req, res) => {
     // Map frontend field names to database field names
     const mappedData = {
       name: updateData.name,
-      email: updateData.email,
+      email: updateData.email ? updateData.email.toLowerCase() : undefined,
       phone_number: updateData.phone,
       about_me: updateData.about,
       city: updateData.city,
-      state: updateData.state, // Add state field
+      state: updateData.state,
       country: updateData.country,
       languages: updateData.languages,
       gender: updateData.gender
@@ -88,32 +94,30 @@ router.put('/profile', requireAuth, async (req, res) => {
 
     logger.info(`Updating profile for user ${userId}`);
 
-    const [updatedRowsCount] = await User.update(mappedData, {
-      where: { id: userId }
-    });
+    // Update user using Mongoose
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: mappedData },
+      { new: true, runValidators: true }
+    ).select('name email role phone_number about_me city state country languages gender profile_image_url createdAt updatedAt');
 
-    if (updatedRowsCount === 0) {
+    if (!updatedUser) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // Fetch updated user data
-    const updatedUser = await User.findByPk(userId, {
-      attributes: ['id', 'name', 'email', 'role', 'phone_number', 'about_me', 'city', 'state', 'country', 'languages', 'gender', 'profile_image_url', 'created_at', 'updated_at']
-    });
 
     logger.info(`Profile updated successfully for user ${userId}`);
 
     res.json({
       message: 'Profile updated successfully',
       user: {
-        id: updatedUser.id,
+        id: updatedUser._id.toString(),
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
         phone: updatedUser.phone_number,
         about: updatedUser.about_me,
         city: updatedUser.city,
-        state: updatedUser.state, // Include state in response
+        state: updatedUser.state,
         country: updatedUser.country,
         languages: updatedUser.languages,
         gender: updatedUser.gender,
@@ -124,23 +128,14 @@ router.put('/profile', requireAuth, async (req, res) => {
   } catch (error) {
     logger.error('Error updating profile:', error);
     
-    // Handle Sequelize validation errors
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      if (error.fields && error.fields.email) {
-        return res.status(409).json({ message: 'Email already exists. Please use a different email address.' });
-      }
-      return res.status(409).json({ message: 'A field with this value already exists' });
+    // Handle MongoDB/Mongoose errors
+    if (error.name === 'MongoServerError' && error.code === 11000) {
+      return res.status(409).json({ message: 'Email already exists. Please use a different email address.' });
     }
     
-    // Handle Sequelize validation errors
-    if (error.name === 'SequelizeValidationError') {
-      const messages = error.errors.map(e => e.message).join(', ');
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message).join(', ');
       return res.status(400).json({ message: `Validation error: ${messages}` });
-    }
-    
-    // Handle database connection errors
-    if (error.name === 'SequelizeConnectionError' || error.name === 'SequelizeAccessDeniedError') {
-      return res.status(503).json({ message: 'Database connection error. Please try again later.' });
     }
     
     // Generic error
@@ -169,6 +164,11 @@ router.post('/profile/avatar', requireAuth, profileUpload.single('avatar'), asyn
   try {
     const userId = req.session.user.id;
     
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID' });
+    }
+    
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
@@ -177,22 +177,22 @@ router.post('/profile/avatar', requireAuth, profileUpload.single('avatar'), asyn
     const imageUrl = `/uploads/profiles/${req.file.filename}`;
     
     // Update user's profile_image_url in database
-    await User.update(
-      { profile_image_url: imageUrl },
-      { where: { id: userId } }
-    );
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: { profile_image_url: imageUrl } },
+      { new: true }
+    ).select('name email role phone_number about_me city state country languages gender profile_image_url');
 
-    // Fetch updated user data
-    const updatedUser = await User.findByPk(userId, {
-      attributes: ['id', 'name', 'email', 'role', 'phone_number', 'about_me', 'city', 'state', 'country', 'languages', 'gender', 'profile_image_url']
-    });
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     logger.info(`Profile picture uploaded successfully for user ${userId}`);
 
     res.json({
       message: 'Profile picture uploaded successfully',
       user: {
-        id: updatedUser.id,
+        id: updatedUser._id.toString(),
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,

@@ -1,10 +1,19 @@
 import React from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { logoutUser } from '../store/slices/authSlice'
+import { selectUser } from '../store/selectors'
 import { LogOut, User, Home, LayoutDashboard } from 'lucide-react'
 
 export default function NavBar() {
-  const { user, logout } = useAuth()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await dispatch(logoutUser())
+    navigate('/login', { replace: true })
+  }
 
   // Get profile image URL
   const getProfileImageUrl = () => {
@@ -119,7 +128,7 @@ export default function NavBar() {
                   <span className="hidden sm:inline">Profile</span>
                 </NavLink>
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 inline-flex items-center gap-1"
                   aria-label="Log out"
                 >

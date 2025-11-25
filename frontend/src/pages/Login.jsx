@@ -1,26 +1,34 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { loginUser } from '../store/slices/authSlice'
+import { selectUser, selectAuthError, selectAuthLoading } from '../store/selectors'
 
 export default function Login() {
-  const { login } = useAuth()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const error = useAppSelector(selectAuthError)
+  const loading = useAppSelector(selectAuthLoading)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const [params] = useSearchParams()
   const navigate = useNavigate()
 
-  const onSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true); setError('')
-    try {
-      const user = await login(email, password) // POST /auth/login
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
       const next = params.get('next')
       navigate(next || (user.role === 'owner' ? '/owner' : '/traveler'), { replace: true })
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Login failed')
-    } finally { setLoading(false) }
+    }
+  }, [user, navigate, params])
+
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    const result = await dispatch(loginUser({ email, password }))
+    if (loginUser.fulfilled.match(result)) {
+      const next = params.get('next')
+      navigate(next || (result.payload.role === 'owner' ? '/owner' : '/traveler'), { replace: true })
+    }
   }
 
   return (

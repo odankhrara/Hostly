@@ -9,7 +9,7 @@ resources:
   - secrets.yaml
   - zookeeper-deployment.yaml
   - kafka-deployment.yaml
-  - mysql-deployment.yaml
+  - mongodb-deployment.yaml
   - backend-deployment.yaml
   - agent-deployment.yaml
   - frontend-deployment.yaml

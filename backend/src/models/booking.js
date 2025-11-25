@@ -1,59 +1,49 @@
-const { DataTypes, Model } = require('sequelize');
-const { sequelize } = require('../config/database');
-const User = require('./user');
-const Property = require('./property');
+const mongoose = require('mongoose');
 
-class Booking extends Model {}
-
-Booking.init({
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    property_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: Property,
-            key: 'id',
-        },
-    },
-    traveler_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
-    },
-    start_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-    },
-    end_date: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-    },
-    num_guests: {              // Changed to match requirements naming
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
-    status: {                  // Updated status options as per requirements
-        type: DataTypes.ENUM('pending', 'accepted', 'cancelled'),
-        allowNull: false,
-        defaultValue: 'pending',
-    },
-    total_price: {             // Added total price field
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-    }
+const bookingSchema = new mongoose.Schema({
+  property_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Property',
+    required: true
+  },
+  traveler_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  start_date: {
+    type: Date,
+    required: true
+  },
+  end_date: {
+    type: Date,
+    required: true
+  },
+  num_guests: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'accepted', 'cancelled'],
+    default: 'pending',
+    required: true
+  },
+  total_price: {
+    type: Number,
+    required: true,
+    min: 0
+  }
 }, {
-    sequelize,
-    modelName: 'Booking',
-    tableName: 'bookings',
-    underscored: true,
-    timestamps: true,
+  timestamps: true
 });
+
+// Indexes for faster queries
+bookingSchema.index({ property_id: 1 });
+bookingSchema.index({ traveler_id: 1 });
+bookingSchema.index({ status: 1 });
+
+const Booking = mongoose.model('Booking', bookingSchema);
 
 module.exports = Booking;

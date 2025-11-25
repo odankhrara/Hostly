@@ -34,28 +34,33 @@ spec:
             configMapKeyRef:
               name: hostly-config
               key: PORT
-        - name: DB_HOST
-          value: "mysql"
-        - name: DB_USER
+        - name: MONGODB_HOST
           valueFrom:
             configMapKeyRef:
               name: hostly-config
-              key: DB_USER
-        - name: DB_PASSWORD
+              key: MONGODB_HOST
+        - name: MONGODB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: hostly-config
+              key: MONGODB_PORT
+        - name: MONGODB_DB
+          valueFrom:
+            configMapKeyRef:
+              name: hostly-config
+              key: MONGODB_DB
+        - name: MONGODB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: hostly-config
+              key: MONGODB_USER
+        - name: MONGODB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: hostly-secrets
-              key: DB_PASSWORD
-        - name: DB_NAME
-          valueFrom:
-            configMapKeyRef:
-              name: hostly-config
-              key: DB_NAME
-        - name: DB_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: hostly-config
-              key: DB_PORT
+              key: MONGODB_PASSWORD
+        - name: MONGODB_URI
+          value: "mongodb://$(MONGODB_USER):$(MONGODB_PASSWORD)@$(MONGODB_HOST):$(MONGODB_PORT)/$(MONGODB_DB)?authSource=admin"
         - name: SESSION_SECRET
           valueFrom:
             secretKeyRef:
@@ -71,6 +76,11 @@ spec:
             configMapKeyRef:
               name: hostly-config
               key: CORS_ORIGIN
+        - name: KAFKA_BROKER
+          valueFrom:
+            configMapKeyRef:
+              name: hostly-config
+              key: KAFKA_BROKER
         volumeMounts:
         - name: uploads-storage
           mountPath: /app/uploads
@@ -85,7 +95,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /api
+            path: /api/auth/me
             port: 3000
           initialDelaySeconds: 40
           periodSeconds: 10
@@ -93,7 +103,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /api
+            path: /api/auth/me
             port: 3000
           initialDelaySeconds: 10
           periodSeconds: 5

@@ -1,84 +1,102 @@
-const { DataTypes, Model } = require('sequelize');
-const bcrypt = require('bcryptjs'); // Keep only this line
-const { sequelize } = require('../config/database');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-class User extends Model {}
-
-User.init({
-    // --- Basic Info ---
-    id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true, // No two users can have the same email
-        validate: {
-            isEmail: true, // Make sure it's a valid email format
-        },
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    role: {
-        type: DataTypes.ENUM('traveler', 'owner', 'both'),
-        allowNull: false,
-        defaultValue: 'traveler',
-    },
-
-    // --- Profile Info (as required) ---
-    phone_number: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    about_me: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-    },
-    city: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    state: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    country: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    languages: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    gender: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    profile_image_url: {
-        type: DataTypes.STRING,
-        allowNull: true,
+const userSchema = new mongoose.Schema({
+  // --- Basic Info ---
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      },
+      message: 'Please enter a valid email address'
     }
+  },
+  password: {
+    type: String,
+    required: true,
+    select: false // Don't return password by default
+  },
+  role: {
+    type: String,
+    enum: ['traveler', 'owner', 'both'],
+    default: 'traveler',
+    required: true
+  },
+  
+  // --- Profile Info ---
+  phone_number: {
+    type: String,
+    default: null
+  },
+  about_me: {
+    type: String,
+    default: null
+  },
+  city: {
+    type: String,
+    default: null
+  },
+  state: {
+    type: String,
+    default: null
+  },
+  country: {
+    type: String,
+    default: null
+  },
+  languages: {
+    type: String,
+    default: null
+  },
+  gender: {
+    type: String,
+    default: null
+  },
+  profile_image_url: {
+    type: String,
+    default: null
+  }
 }, {
-    sequelize, // Pass the connection instance
-    modelName: 'User',
-    tableName: 'users', // Explicitly tell Sequelize the table name
-    hooks: {
-        // This 'hook' runs just before a new user is created
-        beforeCreate: async (user) => {
-            if (user.password) {
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(user.password, salt);
-            }
-        },
-    },
+  timestamps: true, // Adds createdAt and updatedAt
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.password; // Never return password in JSON
+      return ret;
+    }
+  }
 });
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  // Only hash the password if it has been modified (or is new)
+  if (!this.isModified('password')) {
+    return next();
+  }
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Method to compare password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;

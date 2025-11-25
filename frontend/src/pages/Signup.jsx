@@ -1,24 +1,31 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { registerUser } from '../store/slices/authSlice'
+import { selectUser, selectAuthError, selectAuthLoading } from '../store/selectors'
 
 export default function Signup() {
-  const { register } = useAuth()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(selectUser)
+  const error = useAppSelector(selectAuthError)
+  const loading = useAppSelector(selectAuthLoading)
   const [form, setForm] = useState({ name:'', email:'', password:'', role:'traveler' })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const set = (k,v)=> setForm(prev=>({...prev,[k]:v}))
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'owner' ? '/owner' : '/traveler', { replace: true })
+    }
+  }, [user, navigate])
+
   const onSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true); setError('')
-    try {
-      const user = await register(form) // POST /auth/register
-      navigate(user.role === 'owner' ? '/owner' : '/traveler', { replace: true })
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Signup failed')
-    } finally { setLoading(false) }
+    const result = await dispatch(registerUser(form))
+    if (registerUser.fulfilled.match(result)) {
+      navigate(result.payload.role === 'owner' ? '/owner' : '/traveler', { replace: true })
+    }
   }
 
   return (
@@ -49,7 +56,7 @@ export default function Signup() {
           </select>
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <button disabled={loading} className="w-full rounded-xl bg-brand-600 text-white px-4 py-2">
+        <button disabled={loading} type="submit" className="w-full rounded-xl bg-brand-600 text-white px-4 py-2">
           {loading ? 'Creating…' : 'Sign up'}
         </button>
       </form>
